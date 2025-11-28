@@ -20,7 +20,7 @@ class HelloController {
     @GetMapping("/api/hello")
     public Map<String, Object> hello() {
         return Map.of(
-            "message", "Bye from testapp-v6!",
+            "message", "Hi from testapp-v6!",
             "timestamp", LocalDateTime.now(),
             "service", "testapp-v6"
         );
