@@ -107,13 +107,53 @@ jobs:
           
           echo ""
           echo "✅ ArgoCD Application registered!"
-          echo "🔍 Check status:"
-          echo "   kubectl get application testapp-v6 -n argocd"
+          
+          # Wait a moment for Application to be created
+          sleep 5
           
           echo ""
-          echo "🚀 ArgoCD will now automatically sync from:"
+          echo "🔄 Triggering ArgoCD sync..."
+          
+          # Trigger refresh and sync using annotation
+          kubectl annotate application testapp-v6 -n argocd \
+            argocd.argoproj.io/refresh=normal --overwrite
+          
+          # Trigger hard refresh to force sync immediately
+          kubectl patch application testapp-v6 -n argocd \
+            --type merge \
+            --patch '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}'
+          
+          echo ""
+          echo "⏳ Waiting for sync to complete..."
+          
+          # Wait for sync to complete (max 2 minutes)
+          for i in {1..24}; do
+            SYNC_STATUS=$(kubectl get application testapp-v6 -n argocd -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "Unknown")
+            HEALTH_STATUS=$(kubectl get application testapp-v6 -n argocd -o jsonpath='{.status.health.status}' 2>/dev/null || echo "Unknown")
+            
+            echo "  Sync: $SYNC_STATUS, Health: $HEALTH_STATUS"
+            
+            if [ "$SYNC_STATUS" = "Synced" ] && [ "$HEALTH_STATUS" = "Healthy" ]; then
+              echo ""
+              echo "✅ Application synced and healthy!"
+              break
+            fi
+            
+            if [ $i -eq 24 ]; then
+              echo ""
+              echo "⚠️  Sync timeout, but continuing... Check ArgoCD UI for details"
+            fi
+            
+            sleep 5
+          done
+          
+          echo ""
+          echo "🔍 Application Status:"
+          kubectl get application testapp-v6 -n argocd
+          
+          echo ""
+          echo "🚀 Deployment completed!"
           echo "   Repository: ${{ github.repository }}"
-          echo "   Path: k8s/"
           echo "   Image: ghcr.io/${{ github.repository }}:${{ github.sha }}"
 
       - name: ArgoCD not installed - Manual steps required
