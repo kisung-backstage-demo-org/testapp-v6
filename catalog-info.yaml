@@ -1,0 +1,70 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: "testapp-v6"
+  title: "Testapp-v6"
+  description: "test"
+  tags:
+    - security
+    - governance
+    - java
+    - spring-boot
+    - rest-api
+    - kubernetes
+  annotations:
+    github.com/project-slug: "kisung-backstage-demo-org/testapp-v6"
+    backstage.io/techdocs-ref: dir:.
+    argocd/app-name: "testapp-v6"
+    # Governance annotations
+    governance/security-scan: "trivy"
+    governance/scan-frequency: "weekly"
+    kubernetes.io/cluster: "demo"
+    kubernetes.io/namespace: "default"
+  links:
+    - url: "https://github.com/kisung-backstage-demo-org/testapp-v6"
+      title: Source Code
+      icon: github
+    - url: "https://github.com/kisung-backstage-demo-org/testapp-v6/actions"
+      title: CI/CD Pipeline
+    - url: "https://github.com/kisung-backstage-demo-org/testapp-v6/actions/workflows/trivy-scan.yml"
+      title: Security Scans
+      icon: security
+spec:
+  type: service
+  lifecycle: production
+  owner: "team:platform"
+  system: platform
+  dependsOn:
+    - "resource:default/eks-dev-demo-v2"
+  providesApis:
+    - "testapp-v6-api"
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: "testapp-v6-api"
+  description: REST API for testapp-v6
+spec:
+  type: openapi
+  lifecycle: production
+  owner: "team:platform"
+  system: platform
+  definition: |
+    openapi: 3.0.0
+    info:
+      title: Testapp-v6 API
+      version: 1.0.0
+    paths:
+      /health:
+        get:
+          summary: Health check
+          responses:
+            '200':
+              description: Service is healthy
+      /api/hello:
+        get:
+          summary: Hello endpoint
+          responses:
+            '200':
+              description: Success

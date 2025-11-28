@@ -1,0 +1,80 @@
+name: Security Scan (Trivy)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly scan
+
+permissions:
+  contents: read
+
+jobs:
+  trivy:
+    name: Trivy Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image for scanning
+        run: |
+          docker build -t testapp-v6:scan -f Dockerfile .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: 'testapp-v6:scan'
+          format: 'json'
+          output: 'trivy-report.json'
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+          exit-code: '0'
+
+      - name: Generate Trivy summary
+        run: |
+          echo "📊 Trivy Scan Summary" > trivy-summary.txt
+          echo "===================" >> trivy-summary.txt
+          echo "" >> trivy-summary.txt
+          
+          CRITICAL=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' trivy-report.json)
+          HIGH=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' trivy-report.json)
+          MEDIUM=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="MEDIUM")] | length' trivy-report.json)
+          LOW=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="LOW")] | length' trivy-report.json)
+          
+          echo "🔴 Critical: $CRITICAL" >> trivy-summary.txt
+          echo "🟠 High: $HIGH" >> trivy-summary.txt
+          echo "🟡 Medium: $MEDIUM" >> trivy-summary.txt
+          echo "🟢 Low: $LOW" >> trivy-summary.txt
+          
+          cat trivy-summary.txt
+
+      - name: Upload Trivy report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: |
+            trivy-report.json
+            trivy-summary.txt
+          retention-days: 90
+
+      - name: Run Trivy config scanner
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'json'
+          output: 'trivy-config.json'
+          exit-code: '0'
+
+      - name: Upload config scan as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-config
+          path: trivy-config.json
+          retention-days: 90
