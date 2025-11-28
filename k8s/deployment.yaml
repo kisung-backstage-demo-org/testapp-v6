@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: testapp-v6
-        image: ghcr.io/kisung-backstage-demo-org/testapp-v6:4bfda4926877f00b1c828e0022501127f3ff94d2
+        image: ghcr.io/kisung-backstage-demo-org/testapp-v6:116d6d9b7a3d4453b113e1f8774a3cb5dfcce776
         ports:
         - containerPort: 8080
           name: http
